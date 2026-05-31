@@ -5,16 +5,23 @@
 ###############################################################################
 
 
-from conversation.text.text_to_text import get_chat_response
 from conversation.config import DEFAULT_LANGUAGE
+from conversation.speech.speech_to_text import MacSTT
 
 
 def main():
     language = DEFAULT_LANGUAGE
+    stt = MacSTT(language=language)
 
-    messages = [{"role": "user", "content": "Hola, ¿cómo estás hoy?"}]
-    response = get_chat_response(messages, language=language)
-    print(f"Mistral: {response}")
+    print(f"Language: {language}")
+    input("Press Enter to start recording...")
+    stt.start()
+    input("Recording — press Enter to stop...")
+    stt.stop()
+
+    print("Transcribing...")
+    text = stt.get_transcript()
+    print(f"Transcript: {text!r}")
 
 
 if __name__ == "__main__":
