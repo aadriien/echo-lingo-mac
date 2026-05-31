@@ -5,12 +5,12 @@
 ###############################################################################
 
 
-# Language options: code for SFSpeechRecognizer, voice name for `say`
+# Language options: Whisper language code + macOS neural voice for `say`
 LANGUAGE_OPTIONS = {
-    "English": {"code": "en-US", "voice": "Samantha"},
-    "Spanish": {"code": "es-ES", "voice": "Monica"},
-    "French":  {"code": "fr-FR", "voice": "Thomas"},
-    "German":  {"code": "de-DE", "voice": "Anna"},
+    "English": {"code": "en-US", "voice": "Eddy (English (US))"},
+    "Spanish": {"code": "es-ES", "voice": "Eddy (Spanish (Spain))"},
+    "French":  {"code": "fr-FR", "voice": "Eddy (French (France))"},
+    "German":  {"code": "de-DE", "voice": "Eddy (German (Germany))"},
 }
 
 DEFAULT_LANGUAGE = "Spanish"

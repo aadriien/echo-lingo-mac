@@ -7,6 +7,7 @@
 
 from conversation.config import DEFAULT_LANGUAGE
 from conversation.speech.speech_to_text import WhisperSTT
+from conversation.speech.text_to_speech import speak
 
 
 def main():
@@ -22,6 +23,10 @@ def main():
     print("Transcribing...")
     text = stt.get_transcript()
     print(f"Transcript: {text!r}")
+
+    if text:
+        print("Speaking...")
+        speak(text, language=language)
 
 
 if __name__ == "__main__":
