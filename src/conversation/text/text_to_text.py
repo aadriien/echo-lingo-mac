@@ -21,8 +21,14 @@ def get_chat_response(messages, language="Spanish"):
     # messages: full conversation history as list of {"role": ..., "content": ...}
     system = {"role": "system", "content": SYSTEM_PROMPTS.get(language, SYSTEM_PROMPTS["English"])}
 
-    response = ollama.chat(
-        model=OLLAMA_MODEL,
-        messages=[system] + messages,
-    )
-    return response["message"]["content"]
+    try:
+        response = ollama.chat(
+            model=OLLAMA_MODEL,
+            messages=[system] + messages,
+        )
+        return response["message"]["content"]
+
+    except ollama.ResponseError as e:
+        raise RuntimeError(f"Ollama error ({e.status_code}): {e.error}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to reach Ollama. Is it running? ({e})")

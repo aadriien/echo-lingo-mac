@@ -6,7 +6,7 @@ authors = [
     {name = "Adrien Lynch",email = "adriienlynch@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.14,<3.15"
+requires-python = ">=3.11,<3.15"
 dependencies = [
     "pyobjc-framework-speech (>=12.2,<13.0)",
     "pyobjc-framework-avfoundation (>=12.2,<13.0)",

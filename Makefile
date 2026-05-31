@@ -12,18 +12,18 @@ all: setup run
 
 # Install Poetry dependencies & set up venv
 setup:
-	@which poetry > /dev/null || (echo "Poetry not found. Installing..."; curl -sSL https://install.python-poetry.org | python3 -)
+	@which poetry > /dev/null || (echo "Poetry not found. Installing..."; curl -sSL https://install.python-poetry.org | python3.14 -)
 	@$(POETRY) config virtualenvs.in-project true
 	@if [ ! -d "$(VENV_DIR)" ]; then \
 		echo "Virtual environment not found. Creating..."; \
-		$(POETRY) env use python3.11; \
+		$(POETRY) env use python3.14; \
 		$(POETRY) install --no-root --quiet; \
 	fi
 
 
 # Run the main pipeline (PYTHONPATH=src so imports resolve from src/)
 run:
-	@PYTHONPATH=src $(POETRY) run $(PYTHON) main.py
+	@PYTHONPATH=src $(POETRY) run $(PYTHON) src/main.py
 
 
 # Clear away venv
