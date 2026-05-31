@@ -9,11 +9,17 @@ import ollama
 from conversation.config import OLLAMA_MODEL
 
 
+_TONE = (
+    "Keep your reply proportional to what the user said — "
+    "a short message gets a short reply, not an essay. "
+    "Sound like a real person having a natural back-and-forth, not a teacher giving a lesson."
+)
+
 SYSTEM_PROMPTS = {
-    "English": "You are a friendly and natural conversational partner. Reply in clear, casual English.",
-    "Spanish": "Eres un compañero de conversación amigable y natural. Responde en español claro y casual.",
-    "French":  "Tu es un partenaire de conversation amical et naturel. Réponds en français clair et naturel.",
-    "German":  "Du bist ein freundlicher und natürlicher Gesprächspartner. Antworte in klarem, lockerem Deutsch.",
+    "English": f"You are a friendly conversational partner. Reply in clear, casual English. {_TONE}",
+    "Spanish": f"Eres un compañero de conversación amigable. Responde en español claro y casual. {_TONE}",
+    "French":  f"Tu es un partenaire de conversation amical. Réponds en français clair et naturel. {_TONE}",
+    "German":  f"Du bist ein freundlicher Gesprächspartner. Antworte in klarem, lockerem Deutsch. {_TONE}",
 }
 
 
