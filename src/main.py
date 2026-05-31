@@ -6,12 +6,12 @@
 
 
 from conversation.config import DEFAULT_LANGUAGE
-from conversation.speech.speech_to_text import MacSTT
+from conversation.speech.speech_to_text import WhisperSTT
 
 
 def main():
     language = DEFAULT_LANGUAGE
-    stt = MacSTT(language=language)
+    stt = WhisperSTT(language=language)
 
     print(f"Language: {language}")
     input("Press Enter to start recording...")

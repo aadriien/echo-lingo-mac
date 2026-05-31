@@ -16,7 +16,7 @@ from conversation.config import LANGUAGE_OPTIONS
 _MODEL = "mlx-community/whisper-small-mlx"
 
 
-class MacSTT:
+class WhisperSTT:
     SAMPLE_RATE = 16_000
 
     def __init__(self, language="Spanish"):
