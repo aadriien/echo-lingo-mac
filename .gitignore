@@ -12,3 +12,6 @@ dist/
 
 # macOS
 .DS_Store
+
+# History
+src/history/json/*.json
