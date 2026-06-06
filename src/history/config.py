@@ -1,3 +1,22 @@
+REDUCE_PROMPTS = {
+    "English": (
+        "From this list of key points, condense to the 3-5 most important short phrases. "
+        "One phrase per line. No preamble, no labels."
+    ),
+    "Spanish": (
+        "De esta lista de puntos clave, condensa a las 3-5 frases cortas más importantes. "
+        "Una frase por línea. Sin preámbulo, sin etiquetas."
+    ),
+    "French": (
+        "De cette liste de points clés, condense en 3 à 5 courtes phrases essentielles. "
+        "Une phrase par ligne. Pas de préambule, pas d'étiquettes."
+    ),
+    "German": (
+        "Aus dieser Liste von Schlüsselpunkten, verdichte auf die 3-5 wichtigsten kurzen Phrasen. "
+        "Eine Phrase pro Zeile. Keine Einleitung, keine Labels."
+    ),
+}
+
 SUMMARIZE_PROMPTS = {
     "English": (
         "Read this conversation and output 3-5 short phrases (no full sentences) "
