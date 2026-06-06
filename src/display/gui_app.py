@@ -44,7 +44,7 @@ class App(ctk.CTk):
         super().__init__()
         self.title("Echo Lingo")
         self.geometry(f"{W}x{H}")
-        self.resizable(False, False)
+        self.minsize(600, 400)
         self.configure(fg_color=BG)
 
         self._streaming_label = None
@@ -96,7 +96,7 @@ class App(ctk.CTk):
             height=28,
         )
         self._lang_menu.set(self._controller.language)
-        self._lang_menu.place(x=W - 148, rely=0.5, anchor="w")
+        self._lang_menu.place(relx=1.0, x=-18, rely=0.5, anchor="e")
 
     def _make_chat_area(self):
         self._scroll = ctk.CTkScrollableFrame(self, fg_color=BG, corner_radius=0)
@@ -107,16 +107,7 @@ class App(ctk.CTk):
         bar.grid(row=2, column=0, sticky="ew")
         bar.grid_propagate(False)
 
-        ctk.CTkFrame(bar, height=2, fg_color=DIVIDER, corner_radius=0).place(
-            x=0, y=0, relwidth=1.0
-        )
-        self._status_label = ctk.CTkLabel(
-            bar,
-            text="Tap to speak",
-            font=ctk.CTkFont(size=13),
-            text_color=SUBTEXT,
-        )
-        self._status_label.place(relx=0.5, y=20, anchor="n")
+        ctk.CTkFrame(bar, height=2, fg_color=DIVIDER, corner_radius=0).pack(fill="x")
 
         self._mic_btn = ctk.CTkButton(
             bar,
@@ -130,7 +121,15 @@ class App(ctk.CTk):
             text_color="#FFFFFF",
             command=self._on_mic_clicked,
         )
-        self._mic_btn.place(relx=0.5, y=108, anchor="s")
+        self._mic_btn.pack(side="bottom", pady=(0, 10))
+
+        self._status_label = ctk.CTkLabel(
+            bar,
+            text="Tap to speak",
+            font=ctk.CTkFont(size=13),
+            text_color=SUBTEXT,
+        )
+        self._status_label.pack(expand=True)
 
     # ── event handlers ────────────────────────────────────────────────────────
 
