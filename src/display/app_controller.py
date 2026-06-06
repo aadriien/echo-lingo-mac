@@ -64,17 +64,16 @@ class ConversationController:
         self._stt      = WhisperSTT(language=lang)
         self._history  = []
 
-    def summarize_and_save_topic(self) -> bool:
-        """Summarize the current topic conversation and persist it to disk.
-        Blocking — caller should run this on a background thread.
-        Returns True if anything was saved."""
+    def get_summary(self) -> list[str]:
+        """Run summarization and return bullets. Does NOT save. Raises RuntimeError on failure."""
         if not self._topic or len(self._history) < 2:
-            return False
-        bullets = summarize_conversation(self._history, self._language)
-        if bullets:
+            return []
+        return summarize_conversation(self._history, self._language)
+
+    def save_summary(self, bullets: list[str]) -> None:
+        """Persist the given bullets to disk for the current topic + language."""
+        if self._topic and bullets:
             save_bullets(topic_name(self._topic, "English"), self._language, bullets)
-            return True
-        return False
 
     def set_topic(self, topic: dict | None):
         self._topic   = topic

@@ -10,6 +10,7 @@ import customtkinter as ctk
 
 from conversation.config import LANGUAGE_OPTIONS
 from display.app_controller import ConversationController
+from display.summary_card import SummaryCard
 from conversation.text.config import GREETINGS
 from topics.config import TOPICS, topic_name, topic_hint
 
@@ -345,14 +346,19 @@ class App(ctk.CTk):
             btn.configure(height=btn_h, font=ctk.CTkFont(size=font_size))
 
     def _save_current_topic(self):
-        """Show saving state, run the blocking summarize + write, then restore UI.
-        No-ops silently if there is no topic or not enough history."""
+        """Summarize → show review card → save. No-ops if no topic or too little history."""
         if not self._controller.has_saveable_history:
             return
         self._set_saving(True)
-        self.update_idletasks()  # repaint before blocking.. safer than update()
+        self.update_idletasks()
         try:
-            self._controller.summarize_and_save_topic()
+            bullets = self._controller.get_summary()
+            if bullets:
+                self._status_label.configure(text="Review your notes")
+                self.update_idletasks()  # repaint before blocking.. safer than update()
+                card = SummaryCard(self, bullets)
+                if card.result:
+                    self._controller.save_summary(card.result)
         except RuntimeError as e:
             self._status_label.configure(text=str(e))
         finally:
