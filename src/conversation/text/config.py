@@ -25,6 +25,13 @@ SYSTEM_PROMPTS = {
     ),
 }
 
+GREETINGS = {
+    "English": "Hey! Tap 🎙 to start speaking.",
+    "Spanish": "¡Hola! Toca 🎙 para empezar a hablar.",
+    "French":  "Salut ! Appuie sur 🎙 pour commencer à parler.",
+    "German":  "Hallo! Tippe auf 🎙 um anzufangen.",
+}
+
 # Appended to the system prompt when a topic is selected.
 # {hint} is substituted with the topic's hint string.
 TOPIC_PROMPTS = {

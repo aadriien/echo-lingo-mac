@@ -10,7 +10,8 @@ import customtkinter as ctk
 
 from conversation.config import LANGUAGE_OPTIONS
 from display.app_controller import ConversationController
-from topics.config import TOPICS
+from conversation.text.config import GREETINGS
+from topics.config import TOPICS, topic_name, topic_hint
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("green")
@@ -66,7 +67,7 @@ class App(ctk.CTk):
         )
 
         self._build_ui()
-        self._add_bubble("Hola! Tap 🎙 to start speaking.", is_user=False)
+        self._add_bubble(GREETINGS.get(self._controller.language, GREETINGS["English"]), is_user=False)
 
     # ── layout ────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ class App(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)  # main content
         self._make_sidebar()
         self._make_main()
+        self.bind("<Configure>", self._on_window_resize)
 
     def _make_sidebar(self):
         self._sidebar = ctk.CTkFrame(
@@ -92,11 +94,12 @@ class App(ctk.CTk):
         self._topic_btns   = {}
         self._active_topic = None  # None = Freeform selected
 
+        lang = self._controller.language
         for i, topic in enumerate(TOPICS):
-            is_freeform = topic["hint"] is None
+            is_freeform = topic_hint(topic, lang) is None
             btn = ctk.CTkButton(
                 self._sidebar,
-                text=f"{topic['emoji']}  {topic['name']}",
+                text=f"{topic['emoji']}  {topic_name(topic, lang)}",
                 font=ctk.CTkFont(size=13),
                 fg_color=TOPIC_SEL if is_freeform else TOPIC_NOR,
                 hover_color=DIVIDER,
@@ -107,7 +110,7 @@ class App(ctk.CTk):
                 command=lambda t=topic: self._on_topic_clicked(t),
             )
             btn.pack(fill="x", padx=10, pady=(12 if i == 0 else 4, 0))
-            self._topic_btns[topic["name"]] = btn
+            self._topic_btns[topic["names"]["English"]] = btn
 
             # separator after freeform row
             if is_freeform:
@@ -222,13 +225,15 @@ class App(ctk.CTk):
         self._sidebar_open = not self._sidebar_open
 
     def _on_topic_clicked(self, topic: dict):
-        self._active_topic = topic if topic["hint"] else None
+        self._active_topic = topic if topic_hint(topic, self._controller.language) else None
+        eng_name = topic["names"]["English"]
 
         for name, btn in self._topic_btns.items():
-            btn.configure(fg_color=TOPIC_SEL if name == topic["name"] else TOPIC_NOR)
+            btn.configure(fg_color=TOPIC_SEL if name == eng_name else TOPIC_NOR)
 
+        lang = self._controller.language
         self._topic_label.configure(
-            text=f"{topic['emoji']} {topic['name']}" if self._active_topic else ""
+            text=f"{topic['emoji']} {topic_name(topic, lang)}" if self._active_topic else ""
         )
 
         self._controller.set_topic(self._active_topic)
@@ -237,6 +242,18 @@ class App(ctk.CTk):
 
     def _on_language_changed(self, lang: str):
         self._controller.set_language(lang)
+        self._refresh_topic_labels(lang)
+        self._reset_chat(lang)
+
+    def _refresh_topic_labels(self, language: str):
+        for topic in TOPICS:
+            btn = self._topic_btns.get(topic["names"]["English"])
+            if btn:
+                btn.configure(text=f"{topic['emoji']}  {topic_name(topic, language)}")
+        if self._active_topic:
+            self._topic_label.configure(
+                text=f"{self._active_topic['emoji']} {topic_name(self._active_topic, language)}"
+            )
 
     def _on_mic_clicked(self):
         if not self._controller.recording:
@@ -312,6 +329,25 @@ class App(ctk.CTk):
         self._scroll_to_bottom()
 
     # ── helpers ───────────────────────────────────────────────────────────────
+
+    def _on_window_resize(self, event):
+        if event.widget is not self:
+            return
+        # Proportionally scale topic button heights and font to fill the sidebar.
+        # overhead = first-button top pad + separator + inter-button gaps
+        n = len(TOPICS)
+        overhead = 12 + 9 + 4 * (n - 1)
+        btn_h = max(28, (event.height - overhead) // n)
+        font_size = max(11, min(18, round(btn_h * 0.34)))
+        for btn in self._topic_btns.values():
+            btn.configure(height=btn_h, font=ctk.CTkFont(size=font_size))
+
+    def _reset_chat(self, lang: str):
+        for widget in self._scroll.winfo_children():
+            widget.destroy()
+        self._streaming_label = None
+        self._streaming_text  = ""
+        self._add_bubble(GREETINGS.get(lang, GREETINGS["English"]), is_user=False)
 
     def _scroll_to_bottom(self):
         self._scroll._parent_canvas.yview_moveto(1.0)
