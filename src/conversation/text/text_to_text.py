@@ -1,7 +1,7 @@
 ###############################################################################
 ##  `text_to_text.py`                                                        ##
 ##                                                                           ##
-##  Purpose: LLM responses via local Mistral (Ollama)                       ##
+##  Purpose: LLM responses via local Mistral (Ollama)                        ##
 ###############################################################################
 
 

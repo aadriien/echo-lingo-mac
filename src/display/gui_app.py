@@ -10,6 +10,7 @@ import customtkinter as ctk
 
 from conversation.config import LANGUAGE_OPTIONS
 from display.app_controller import ConversationController
+from topics.config import TOPICS
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("green")
@@ -22,18 +23,22 @@ USER_BUBBLE = "#FFB74D"   # bright amber/orange
 ASST_BUBBLE = "#80DEEA"   # bright cyan
 TEXT_FG     = "#1A1A1A"   # near-black
 SUBTEXT     = "#8D6E63"   # warm brown
-MIC_IDLE    = "#58CC02"   # Duolingo green
+MIC_IDLE    = "#58CC02"   # bright green
 MIC_REC     = "#FF4B4B"   # bright red
 MIC_DIS     = "#D7CCC8"   # warm gray
 TITLE_FG    = "#FF6D00"   # deep orange
+SIDEBAR_BG  = "#FFFFFF"   # sidebar white
+TOPIC_SEL   = "#FFB74D"   # selected topic block (amber)
+TOPIC_NOR   = "#FFF8F0"   # unselected topic block
 
-W, H     = 860, 580
-MAX_BW   = 360    # max bubble width
-PAD_X    = 16     # horizontal padding inside bubble
-PAD_Y    = 12     # vertical padding inside bubble
-MARGIN   = 20     # gap from window edge
-RADIUS   = 20     # corner radius
-ROW_GAP  = 8      # vertical gap between bubbles
+W, H        = 860, 580
+MAX_BW      = 360    # max bubble width
+PAD_X       = 16     # horizontal padding inside bubble
+PAD_Y       = 12     # vertical padding inside bubble
+MARGIN      = 20     # gap from window edge
+RADIUS      = 20     # corner radius
+ROW_GAP     = 8      # vertical gap between bubbles
+SIDEBAR_W   = 178    # sidebar width when open
 
 
 # ── app ───────────────────────────────────────────────────────────────────────
@@ -49,6 +54,7 @@ class App(ctk.CTk):
 
         self._streaming_label = None
         self._streaming_text  = ""
+        self._sidebar_open    = True
 
         self._controller = ConversationController(
             on_status                 = lambda t: self.after(0, lambda: self._set_status(t)),
@@ -65,22 +71,94 @@ class App(ctk.CTk):
     # ── layout ────────────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        self.grid_rowconfigure(0, weight=0)
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_rowconfigure(2, weight=0)
-        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=0)  # sidebar
+        self.grid_columnconfigure(1, weight=1)  # main content
+        self._make_sidebar()
+        self._make_main()
+
+    def _make_sidebar(self):
+        self._sidebar = ctk.CTkFrame(
+            self, width=SIDEBAR_W, fg_color=SIDEBAR_BG, corner_radius=0
+        )
+        self._sidebar.grid(row=0, column=0, sticky="ns")
+        self._sidebar.grid_propagate(False)
+
+        # right border
+        ctk.CTkFrame(self._sidebar, width=2, fg_color=DIVIDER, corner_radius=0).place(
+            relx=1.0, x=-2, rely=0, relheight=1.0, anchor="nw"
+        )
+
+        self._topic_btns   = {}
+        self._active_topic = None  # None = Freeform selected
+
+        for i, topic in enumerate(TOPICS):
+            is_freeform = topic["hint"] is None
+            btn = ctk.CTkButton(
+                self._sidebar,
+                text=f"{topic['emoji']}  {topic['name']}",
+                font=ctk.CTkFont(size=13),
+                fg_color=TOPIC_SEL if is_freeform else TOPIC_NOR,
+                hover_color=DIVIDER,
+                text_color=TEXT_FG,
+                corner_radius=10,
+                anchor="w",
+                height=38,
+                command=lambda t=topic: self._on_topic_clicked(t),
+            )
+            btn.pack(fill="x", padx=10, pady=(12 if i == 0 else 4, 0))
+            self._topic_btns[topic["name"]] = btn
+
+            # separator after freeform row
+            if is_freeform:
+                ctk.CTkFrame(
+                    self._sidebar, height=1, fg_color=DIVIDER, corner_radius=0
+                ).pack(fill="x", padx=10, pady=(8, 0))
+
+    def _make_main(self):
+        self._main = ctk.CTkFrame(self, fg_color=BG, corner_radius=0)
+        self._main.grid(row=0, column=1, sticky="nsew")
+        self._main.grid_rowconfigure(0, weight=0)
+        self._main.grid_rowconfigure(1, weight=1)
+        self._main.grid_rowconfigure(2, weight=0)
+        self._main.grid_columnconfigure(0, weight=1)
         self._make_header()
         self._make_chat_area()
         self._make_bottom_bar()
 
     def _make_header(self):
-        header = ctk.CTkFrame(self, height=68, fg_color=HEADER_BG, corner_radius=0)
+        header = ctk.CTkFrame(self._main, height=68, fg_color=HEADER_BG, corner_radius=0)
         header.grid(row=0, column=0, sticky="ew")
         header.grid_propagate(False)
 
         ctk.CTkFrame(header, height=2, fg_color=DIVIDER, corner_radius=0).place(
             x=0, rely=1.0, anchor="sw", relwidth=1.0
         )
+
+        # sidebar toggle (far left)
+        self._toggle_btn = ctk.CTkButton(
+            header,
+            text="◀",
+            width=30,
+            height=30,
+            fg_color="transparent",
+            hover_color=DIVIDER,
+            text_color=SUBTEXT,
+            corner_radius=8,
+            command=self._toggle_sidebar,
+        )
+        self._toggle_btn.place(x=12, rely=0.5, anchor="w")
+
+        # active topic indicator (beside toggle)
+        self._topic_label = ctk.CTkLabel(
+            header,
+            text="",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=TITLE_FG,
+        )
+        self._topic_label.place(x=50, rely=0.5, anchor="w")
+
+        # centered title
         ctk.CTkLabel(
             header,
             text="🦜 Echo Lingo",
@@ -88,6 +166,7 @@ class App(ctk.CTk):
             text_color=TITLE_FG,
         ).place(relx=0.5, rely=0.5, anchor="center")
 
+        # language menu (far right)
         self._lang_menu = ctk.CTkOptionMenu(
             header,
             values=list(LANGUAGE_OPTIONS.keys()),
@@ -99,11 +178,11 @@ class App(ctk.CTk):
         self._lang_menu.place(relx=1.0, x=-18, rely=0.5, anchor="e")
 
     def _make_chat_area(self):
-        self._scroll = ctk.CTkScrollableFrame(self, fg_color=BG, corner_radius=0)
+        self._scroll = ctk.CTkScrollableFrame(self._main, fg_color=BG, corner_radius=0)
         self._scroll.grid(row=1, column=0, sticky="nsew")
 
     def _make_bottom_bar(self):
-        bar = ctk.CTkFrame(self, height=120, fg_color=HEADER_BG, corner_radius=0)
+        bar = ctk.CTkFrame(self._main, height=120, fg_color=HEADER_BG, corner_radius=0)
         bar.grid(row=2, column=0, sticky="ew")
         bar.grid_propagate(False)
 
@@ -130,6 +209,29 @@ class App(ctk.CTk):
             text_color=SUBTEXT,
         )
         self._status_label.pack(expand=True)
+
+    # ── sidebar ───────────────────────────────────────────────────────────────
+
+    def _toggle_sidebar(self):
+        if self._sidebar_open:
+            self._sidebar.grid_remove()
+            self._toggle_btn.configure(text="▶")
+        else:
+            self._sidebar.grid()
+            self._toggle_btn.configure(text="◀")
+        self._sidebar_open = not self._sidebar_open
+
+    def _on_topic_clicked(self, topic: dict):
+        self._active_topic = topic if topic["hint"] else None
+
+        for name, btn in self._topic_btns.items():
+            btn.configure(fg_color=TOPIC_SEL if name == topic["name"] else TOPIC_NOR)
+
+        self._topic_label.configure(
+            text=f"{topic['emoji']} {topic['name']}" if self._active_topic else ""
+        )
+
+        self._controller.set_topic(self._active_topic)
 
     # ── event handlers ────────────────────────────────────────────────────────
 
