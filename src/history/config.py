@@ -1,43 +1,15 @@
-REDUCE_PROMPTS = {
-    "English": (
-        "From this list of key points, condense to the 3-5 most important short phrases. "
-        "One phrase per line. No preamble, no labels."
-    ),
-    "Spanish": (
-        "De esta lista de puntos clave, condensa a las 3-5 frases cortas más importantes. "
-        "Una frase por línea. Sin preámbulo, sin etiquetas."
-    ),
-    "French": (
-        "De cette liste de points clés, condense en 3 à 5 courtes phrases essentielles. "
-        "Une phrase par ligne. Pas de préambule, pas d'étiquettes."
-    ),
-    "German": (
-        "Aus dieser Liste von Schlüsselpunkten, verdichte auf die 3-5 wichtigsten kurzen Phrasen. "
-        "Eine Phrase pro Zeile. Keine Einleitung, keine Labels."
-    ),
+SUMMARIZE_PROMPTS = {
+    "English": 'List 1-3 key noun phrases from the text. Max 4 words each. One per line. Example output:\nwhale sharks\nHarry Potter\nNo sentences. No verbs. No filler.',
+    "Spanish": 'Lista 1-3 frases nominales clave del texto. Máximo 4 palabras cada una. Una por línea. Ejemplo:\ntiburones ballena\nHarry Potter\nSin oraciones. Sin verbos.',
+    "French":  'Liste 1-3 phrases nominales clés du texte. 4 mots max chacune. Une par ligne. Exemple :\nrequins baleine\nHarry Potter\nPas de phrases. Pas de verbes.',
+    "German":  'Liste 1-3 Schlüssel-Nominalphrasen aus dem Text. Max. 4 Wörter pro Phrase. Eine pro Zeile. Beispiel:\nWalhaie\nHarry Potter\nKeine Sätze. Keine Verben.',
 }
 
-SUMMARIZE_PROMPTS = {
-    "English": (
-        "Read this conversation and output 3-5 short phrases (no full sentences) "
-        "capturing only specific things mentioned: names, titles, places, opinions, preferences. "
-        "One phrase per line. No preamble, no labels, nothing generic."
-    ),
-    "Spanish": (
-        "Lee esta conversación y escribe 3-5 frases cortas (sin oraciones completas) "
-        "sobre cosas específicas mencionadas: nombres, títulos, lugares, opiniones, preferencias. "
-        "Una frase por línea. Sin preámbulo, sin etiquetas, nada genérico."
-    ),
-    "French": (
-        "Lis cette conversation et écris 3 à 5 courtes phrases (sans phrases complètes) "
-        "sur des choses spécifiques mentionnées : noms, titres, lieux, opinions, préférences. "
-        "Une phrase par ligne. Pas de préambule, pas d'étiquettes, rien de générique."
-    ),
-    "German": (
-        "Lies dieses Gespräch und schreibe 3-5 kurze Phrasen (keine vollständigen Sätze) "
-        "über spezifisch erwähnte Dinge: Namen, Titel, Orte, Meinungen, Vorlieben. "
-        "Eine Phrase pro Zeile. Keine Einleitung, keine Labels, nichts Allgemeines."
-    ),
+REDUCE_PROMPTS = {
+    "English": "Pick the 2-4 most important. Max 4 words each. One per line. No sentences.",
+    "Spanish": "Elige las 2-4 más importantes. Máximo 4 palabras cada una. Una por línea. Sin oraciones.",
+    "French":  "Garde les 2-4 plus importantes. 4 mots max chacune. Une par ligne. Pas de phrases.",
+    "German":  "Wähle die 2-4 wichtigsten. Max. 4 Wörter pro Zeile. Eine pro Zeile. Keine Sätze.",
 }
 
 # Injected into the system prompt when saved history exists for the active topic.

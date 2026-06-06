@@ -1,3 +1,4 @@
+import re
 import ollama
 from conversation.config import OLLAMA_MODEL
 from history.config import SUMMARIZE_PROMPTS, REDUCE_PROMPTS
@@ -21,8 +22,9 @@ def _call_model(system_content: str, user_content: str) -> list[str]:
     try:
         response = ollama.chat(model=OLLAMA_MODEL, messages=payload)
         raw   = response["message"]["content"]
-        lines = [l.strip().lstrip("-•*·").strip() for l in raw.splitlines() if l.strip()]
-        return [l for l in lines if l][:5]
+        lines = [re.sub(r'^\d+[.)]\s*', '', line.strip().lstrip("-•*·")).strip()
+                 for line in raw.splitlines() if line.strip()]
+        return [line for line in lines if line][:4]
     except ollama.ResponseError as e:
         raise RuntimeError(f"Ollama error ({e.status_code}): {e.error}")
     except Exception as e:
@@ -30,18 +32,21 @@ def _call_model(system_content: str, user_content: str) -> list[str]:
 
 
 def summarize_conversation(messages: list, language: str) -> list[str]:
-    if len(messages) < 2:
+    # Only extract from what the user said. Assistant replies reflect the LLM's
+    # persona, not the user's actual preferences or interests.
+    user_msgs = [m for m in messages if m["role"] == "user"]
+    if len(user_msgs) < 1:
         return []
 
     extract_prompt = SUMMARIZE_PROMPTS.get(language, SUMMARIZE_PROMPTS["English"])
 
-    if len(messages) <= _DIRECT_MSG_LIMIT:
-        return _call_model(extract_prompt, _flatten(messages))
+    if len(user_msgs) <= _DIRECT_MSG_LIMIT:
+        return _call_model(extract_prompt, _flatten(user_msgs))
 
-    # Map: summarize each chunk of messages independently
+    # Map: summarize each chunk of user messages independently
     all_bullets: list[str] = []
-    for i in range(0, len(messages), _CHUNK_SIZE):
-        chunk   = messages[i:i + _CHUNK_SIZE]
+    for i in range(0, len(user_msgs), _CHUNK_SIZE):
+        chunk   = user_msgs[i:i + _CHUNK_SIZE]
         bullets = _call_model(extract_prompt, _flatten(chunk))
         all_bullets.extend(bullets)
 
