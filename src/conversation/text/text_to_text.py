@@ -8,20 +8,30 @@
 import ollama
 from conversation.config import OLLAMA_MODEL
 from conversation.text.config import SYSTEM_PROMPTS, TOPIC_PROMPTS
-from topics.config import topic_hint
+from history.config import HISTORY_CONTEXT
+from history.store import load_bullets
+from topics.config import topic_hint, topic_name
 
 
 def _build_system(language: str, messages: list, topic: dict | None = None) -> str:
     base = SYSTEM_PROMPTS.get(language, SYSTEM_PROMPTS["English"])
     last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
     word_target = max(20, min(80, len(last_user.split()) * 2))
+
     hint = topic_hint(topic, language) if topic else None
+    topic_ctx = ""
     if hint:
         template = TOPIC_PROMPTS.get(language, TOPIC_PROMPTS["English"])
         topic_ctx = " " + template.format(hint=hint)
-    else:
-        topic_ctx = ""
-    return f"{base}{topic_ctx} Reply in at most {word_target} words."
+
+    history_ctx = ""
+    if topic:
+        bullets = load_bullets(topic_name(topic, "English"), language)
+        if bullets:
+            template = HISTORY_CONTEXT.get(language, HISTORY_CONTEXT["English"])
+            history_ctx = " " + template.format(bullets="; ".join(bullets))
+
+    return f"{base}{topic_ctx}{history_ctx} Reply in at most {word_target} words."
 
 
 def get_chat_response(messages, language="Spanish", topic=None):

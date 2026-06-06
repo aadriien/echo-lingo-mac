@@ -11,7 +11,10 @@ import time
 from conversation.config import DEFAULT_LANGUAGE
 from conversation.speech.speech_to_text import WhisperSTT
 from conversation.speech.text_to_speech import speak
+from conversation.text.summarize import summarize_conversation
 from conversation.text.text_to_text import stream_chat_response
+from history.store import save_bullets
+from topics.config import topic_name
 
 
 class ConversationController:
@@ -56,6 +59,18 @@ class ConversationController:
         self._language = lang
         self._stt      = WhisperSTT(language=lang)
         self._history  = []
+
+    def summarize_and_save_topic(self) -> bool:
+        """Summarize the current topic conversation and persist it to disk.
+        Blocking — caller should run this on a background thread.
+        Returns True if anything was saved."""
+        if not self._topic or len(self._history) < 2:
+            return False
+        bullets = summarize_conversation(self._history, self._language)
+        if bullets:
+            save_bullets(topic_name(self._topic, "English"), self._language, bullets)
+            return True
+        return False
 
     def set_topic(self, topic: dict | None):
         self._topic   = topic

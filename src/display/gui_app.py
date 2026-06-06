@@ -225,18 +225,24 @@ class App(ctk.CTk):
         self._sidebar_open = not self._sidebar_open
 
     def _on_topic_clicked(self, topic: dict):
-        self._active_topic = topic if topic_hint(topic, self._controller.language) else None
-        eng_name = topic["names"]["English"]
+        lang      = self._controller.language
+        new_topic = topic if topic_hint(topic, lang) else None
+        eng_name  = topic["names"]["English"]
 
         for name, btn in self._topic_btns.items():
             btn.configure(fg_color=TOPIC_SEL if name == eng_name else TOPIC_NOR)
-
-        lang = self._controller.language
         self._topic_label.configure(
-            text=f"{topic['emoji']} {topic_name(topic, lang)}" if self._active_topic else ""
+            text=f"{topic['emoji']} {topic_name(topic, lang)}" if new_topic else ""
         )
 
-        self._controller.set_topic(self._active_topic)
+        self._set_saving(True)
+        self.update()  # force repaint so "Saving notes…" shows before the blocking call
+
+        self._controller.summarize_and_save_topic()
+        self._controller.set_topic(new_topic)
+        self._active_topic = new_topic
+
+        self._set_saving(False)
 
     # ── event handlers ────────────────────────────────────────────────────────
 
@@ -341,6 +347,18 @@ class App(ctk.CTk):
         font_size = max(11, min(18, round(btn_h * 0.34)))
         for btn in self._topic_btns.values():
             btn.configure(height=btn_h, font=ctk.CTkFont(size=font_size))
+
+    def _set_saving(self, saving: bool):
+        state = "disabled" if saving else "normal"
+        self._mic_btn.configure(state=state)
+        self._toggle_btn.configure(state=state)
+        self._lang_menu.configure(state=state)
+        for btn in self._topic_btns.values():
+            btn.configure(state=state)
+        if saving:
+            self._status_label.configure(text="💾 Saving notes…")
+        else:
+            self._status_label.configure(text="Tap to speak")
 
     def _reset_chat(self, lang: str):
         for widget in self._scroll.winfo_children():
