@@ -53,6 +53,10 @@ class ConversationController:
     def recording(self) -> bool:
         return self._recording
 
+    @property
+    def has_saveable_history(self) -> bool:
+        return bool(self._topic and len(self._history) >= 2)
+
     # ── public interface ──────────────────────────────────────────────────────
 
     def set_language(self, lang: str):

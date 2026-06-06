@@ -15,5 +15,7 @@ def summarize_conversation(messages: list, language: str) -> list[str]:
         raw   = response["message"]["content"]
         lines = [l.strip().lstrip("-•*·").strip() for l in raw.splitlines() if l.strip()]
         return [l for l in lines if l][:5]
-    except Exception:
-        return []
+    except ollama.ResponseError as e:
+        raise RuntimeError(f"Ollama error ({e.status_code}): {e.error}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to summarize. Is Ollama running? ({e})")

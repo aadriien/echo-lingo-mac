@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-HISTORY_DIR = Path.home() / ".echo-lingo-mac" / "history"
+HISTORY_DIR = Path(__file__).parent / "json"
 MAX_BULLETS = 15
 
 

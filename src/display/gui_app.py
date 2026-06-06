@@ -235,18 +235,14 @@ class App(ctk.CTk):
             text=f"{topic['emoji']} {topic_name(topic, lang)}" if new_topic else ""
         )
 
-        self._set_saving(True)
-        self.update()  # force repaint so "Saving notes…" shows before the blocking call
-
-        self._controller.summarize_and_save_topic()
+        self._save_current_topic()
         self._controller.set_topic(new_topic)
         self._active_topic = new_topic
-
-        self._set_saving(False)
 
     # ── event handlers ────────────────────────────────────────────────────────
 
     def _on_language_changed(self, lang: str):
+        self._save_current_topic()
         self._controller.set_language(lang)
         self._refresh_topic_labels(lang)
         self._reset_chat(lang)
@@ -347,6 +343,20 @@ class App(ctk.CTk):
         font_size = max(11, min(18, round(btn_h * 0.34)))
         for btn in self._topic_btns.values():
             btn.configure(height=btn_h, font=ctk.CTkFont(size=font_size))
+
+    def _save_current_topic(self):
+        """Show saving state, run the blocking summarize + write, then restore UI.
+        No-ops silently if there is no topic or not enough history."""
+        if not self._controller.has_saveable_history:
+            return
+        self._set_saving(True)
+        self.update_idletasks()  # repaint before blocking.. safer than update()
+        try:
+            self._controller.summarize_and_save_topic()
+        except RuntimeError as e:
+            self._status_label.configure(text=str(e))
+        finally:
+            self._set_saving(False)
 
     def _set_saving(self, saving: bool):
         state = "disabled" if saving else "normal"
