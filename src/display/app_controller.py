@@ -35,6 +35,7 @@ class ConversationController:
         self._on_mic_disabled            = on_mic_disabled
 
         self._language  = DEFAULT_LANGUAGE
+        self._topic     = None
         self._history   = []
         self._stt       = WhisperSTT(language=self._language)
         self._recording = False
@@ -55,6 +56,10 @@ class ConversationController:
         self._language = lang
         self._stt      = WhisperSTT(language=lang)
         self._history  = []
+
+    def set_topic(self, topic: dict | None):
+        self._topic   = topic
+        self._history = []
 
     def start_recording(self):
         self._recording = True
@@ -83,7 +88,7 @@ class ConversationController:
         try:
             self._on_assistant_stream_start()
             full_reply = ""
-            for chunk in stream_chat_response(self._history, language=self._language):
+            for chunk in stream_chat_response(self._history, language=self._language, topic=self._topic):
                 full_reply += chunk
                 self._on_assistant_chunk(chunk)
         except RuntimeError as e:
