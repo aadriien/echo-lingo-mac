@@ -30,32 +30,33 @@ def _rgb(h):
     r, g, b = (int(h[i:i+2], 16) / 255 for i in (0, 2, 4))
     return NSColor.colorWithCalibratedRed_green_blue_alpha_(r, g, b, 1.0)
 
-BG          = _rgb("141416")
-HEADER_BG   = _rgb("1E1E22")
-DIVIDER     = _rgb("2C2C30")
-USER_BUBBLE = _rgb("0A84FF")
-ASST_BUBBLE = _rgb("2C2C30")
+BG          = _rgb("FFF3E0")   # warm amber cream
+HEADER_BG   = _rgb("FFFFFF")   # white
+DIVIDER     = _rgb("FFE0B2")   # warm peach
+USER_BUBBLE = _rgb("E55C3C")   # deep coral
+ASST_BUBBLE = _rgb("169577")   # dark teal
 WHITE       = NSColor.whiteColor()
-SUBTEXT     = _rgb("8E8E93")
-MIC_IDLE    = _rgb("0A84FF")
-MIC_REC     = _rgb("FF3B30")
-MIC_DIS     = _rgb("3A3A3C")
+SUBTEXT     = _rgb("8D6E63")   # warm brown
+MIC_IDLE    = _rgb("58CC02")   # Duolingo green
+MIC_REC     = _rgb("FF4B4B")   # bright red
+MIC_DIS     = _rgb("D7CCC8")   # warm gray
+TITLE_COLOR = _rgb("FF6D00")   # deep orange
 
-TITLE_FONT = NSFont.boldSystemFontOfSize_(16)
-BODY_FONT  = NSFont.systemFontOfSize_(15)
-SMALL_FONT = NSFont.systemFontOfSize_(12)
+TITLE_FONT = NSFont.boldSystemFontOfSize_(20)
+BODY_FONT  = NSFont.systemFontOfSize_(16)
+SMALL_FONT = NSFont.systemFontOfSize_(13)
 
-W, H      = 390, 720
-HEADER_H  = 60
+W, H      = 860, 580
+HEADER_H  = 68
 BOTTOM_H  = 120
-CHAT_H    = H - HEADER_H - BOTTOM_H    # 540
+CHAT_H    = H - HEADER_H - BOTTOM_H    # 392
 
-MAX_BW    = 262     # max bubble width (incl. padding)
-PAD_H     = 14     # horizontal padding inside bubble
-PAD_V     = 10     # vertical padding inside bubble
-MARGIN    = 14     # gap from window edge
-RADIUS    = 18.0
-ROW_GAP   = 7      # vertical gap between bubbles
+MAX_BW    = 340     # max bubble width
+PAD_H     = 16     # horizontal padding inside bubble
+PAD_V     = 12     # vertical padding inside bubble
+MARGIN    = 20     # gap from window edge
+RADIUS    = 24.0   # big radius for blocky-rounded look
+ROW_GAP   = 10     # vertical gap between bubbles
 
 
 # ── views ─────────────────────────────────────────────────────────────────────
@@ -86,13 +87,18 @@ class AppDelegate(NSObject):
         self = objc.super(AppDelegate, self).init()
         if self is None:
             return None
-        self._y_cursor = ROW_GAP
+        self._y_cursor          = ROW_GAP
+        self._streaming_bubble  = None
+        self._streaming_tf      = None
+        self._streaming_text    = ""
+        self._streaming_y       = 0
         self._controller = ConversationController(
-            on_status           = lambda t: self._ui(lambda: self._set_status(t)),
-            on_user_bubble      = lambda t: self._ui(lambda: self._add_bubble(t, is_user=True)),
-            on_assistant_bubble = lambda t: self._ui(lambda: self._add_bubble(t, is_user=False)),
-            on_mic_reset        = lambda: self._ui(self._reset_mic),
-            on_mic_disabled     = lambda: self._ui(self._disable_mic),
+            on_status                = lambda t: self._ui(lambda: self._set_status(t)),
+            on_user_bubble           = lambda t: self._ui(lambda: self._add_bubble(t, is_user=True)),
+            on_assistant_stream_start= lambda: self._ui(lambda: self._start_streaming_bubble()),
+            on_assistant_chunk       = lambda t: self._ui(lambda: self._append_streaming_chunk(t)),
+            on_mic_reset             = lambda: self._ui(self._reset_mic),
+            on_mic_disabled          = lambda: self._ui(self._disable_mic),
         )
         return self
 
@@ -107,7 +113,7 @@ class AppDelegate(NSObject):
         style = (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                  NSWindowStyleMaskMiniaturizable)
         self._win = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
-            NSMakeRect(300, 200, W, H), style, NSBackingStoreBuffered, False,
+            NSMakeRect(200, 200, W, H), style, NSBackingStoreBuffered, False,
         )
         self._win.setTitle_("Echo Lingo")
         self._win.setBackgroundColor_(BG)
@@ -127,15 +133,17 @@ class AppDelegate(NSObject):
         header.setWantsLayer_(True)
         header.layer().setBackgroundColor_(HEADER_BG.CGColor())
 
-        div = NSView.alloc().initWithFrame_(NSMakeRect(0, 0, W, 1))
+        div = NSView.alloc().initWithFrame_(NSMakeRect(0, 0, W, 2))
         div.setWantsLayer_(True)
         div.layer().setBackgroundColor_(DIVIDER.CGColor())
         header.addSubview_(div)
 
-        title = NSTextField.alloc().initWithFrame_(NSMakeRect(80, 18, W - 160, 24))
-        title.setStringValue_("Echo Lingo")
+        title = NSTextField.alloc().initWithFrame_(
+            NSMakeRect(0, (HEADER_H - 28) // 2, W, 28)
+        )
+        title.setStringValue_("🦜 Echo Lingo")
         title.setFont_(TITLE_FONT)
-        title.setTextColor_(WHITE)
+        title.setTextColor_(TITLE_COLOR)
         title.setAlignment_(NSTextAlignmentCenter)
         title.setBezeled_(False)
         title.setDrawsBackground_(False)
@@ -144,12 +152,12 @@ class AppDelegate(NSObject):
         header.addSubview_(title)
 
         popup = NSPopUpButton.alloc().initWithFrame_(
-            NSMakeRect(W - 116, 16, 104, 28)
+            NSMakeRect(W - 148, (HEADER_H - 28) // 2, 136, 28)
         )
         for lang in LANGUAGE_OPTIONS:
             popup.addItemWithTitle_(lang)
         popup.selectItemWithTitle_(self._controller.language)
-        popup.setFont_(NSFont.systemFontOfSize_(13))
+        popup.setFont_(NSFont.systemFontOfSize_(14))
         popup.setTarget_(self)
         popup.setAction_(objc.selector(self.languageChanged_, signature=b"v@:@"))
         header.addSubview_(popup)
@@ -165,11 +173,13 @@ class AppDelegate(NSObject):
         )
         self._scroll.setHasVerticalScroller_(True)
         self._scroll.setDrawsBackground_(False)
-        self._scroll.verticalScroller().setAlphaValue_(0.25)
+        self._scroll.verticalScroller().setAlphaValue_(0.3)
 
         self._doc_view = FlippedView.alloc().initWithFrame_(
             NSMakeRect(0, 0, W, CHAT_H)
         )
+        self._doc_view.setWantsLayer_(True)
+        self._doc_view.layer().setBackgroundColor_(BG.CGColor())
         self._scroll.setDocumentView_(self._doc_view)
         return self._scroll
 
@@ -181,12 +191,12 @@ class AppDelegate(NSObject):
         bar.setWantsLayer_(True)
         bar.layer().setBackgroundColor_(HEADER_BG.CGColor())
 
-        div = NSView.alloc().initWithFrame_(NSMakeRect(0, BOTTOM_H - 1, W, 1))
+        div = NSView.alloc().initWithFrame_(NSMakeRect(0, BOTTOM_H - 2, W, 2))
         div.setWantsLayer_(True)
         div.layer().setBackgroundColor_(DIVIDER.CGColor())
         bar.addSubview_(div)
 
-        self._status_tf = NSTextField.alloc().initWithFrame_(NSMakeRect(0, 78, W, 18))
+        self._status_tf = NSTextField.alloc().initWithFrame_(NSMakeRect(0, 84, W, 20))
         self._status_tf.setStringValue_("Tap to speak")
         self._status_tf.setFont_(SMALL_FONT)
         self._status_tf.setTextColor_(SUBTEXT)
@@ -197,12 +207,12 @@ class AppDelegate(NSObject):
         self._status_tf.setSelectable_(False)
         bar.addSubview_(self._status_tf)
 
-        btn_size = 60
+        btn_size = 72
         self._mic_btn = NSButton.alloc().initWithFrame_(
-            NSMakeRect((W - btn_size) // 2, 12, btn_size, btn_size)
+            NSMakeRect((W - btn_size) // 2, 10, btn_size, btn_size)
         )
         self._mic_btn.setTitle_("🎙")
-        self._mic_btn.setFont_(NSFont.systemFontOfSize_(24))
+        self._mic_btn.setFont_(NSFont.systemFontOfSize_(30))
         self._mic_btn.setWantsLayer_(True)
         self._mic_btn.layer().setCornerRadius_(btn_size / 2)
         self._mic_btn.layer().setBackgroundColor_(MIC_IDLE.CGColor())
@@ -260,7 +270,7 @@ class AppDelegate(NSObject):
     def runBlock_(self, fn):
         fn()
 
-    # ── chat bubbles ──────────────────────────────────────────────────────────
+    # ── static bubble (user messages) ────────────────────────────────────────
 
     @objc.python_method
     def _add_bubble(self, text: str, is_user: bool):
@@ -270,9 +280,7 @@ class AppDelegate(NSObject):
             text, {NSFontAttributeName: BODY_FONT}
         )
         bound = attr.boundingRectWithSize_options_context_(
-            NSMakeSize(inner_w, 10_000),
-            1,      # NSStringDrawingUsesLineFragmentOrigin
-            None,
+            NSMakeSize(inner_w, 10_000), 1, None
         )
         text_h = math.ceil(bound.size.height) + 2
         text_w = min(math.ceil(bound.size.width), inner_w)
@@ -286,10 +294,9 @@ class AppDelegate(NSObject):
         )
         bubble._color = USER_BUBBLE if is_user else ASST_BUBBLE
 
-        # Text field — y from bottom of bubble in non-flipped bubble coords
-        tf_y = bubble_h - PAD_V - text_h
+        # bubble_h = text_h + 2*PAD_V, so tf_y from bottom = PAD_V
         tf = NSTextField.alloc().initWithFrame_(
-            NSMakeRect(PAD_H, tf_y, text_w, text_h)
+            NSMakeRect(PAD_H, PAD_V, text_w, text_h)
         )
         tf.setStringValue_(text)
         tf.setFont_(BODY_FONT)
@@ -303,14 +310,83 @@ class AppDelegate(NSObject):
 
         self._doc_view.addSubview_(bubble)
         self._y_cursor += bubble_h + ROW_GAP
+        self._grow_doc_view_if_needed()
+        self._scroll_to_bottom()
 
-        # Grow document view if content exceeds current height
+    # ── streaming bubble (assistant messages) ────────────────────────────────
+
+    @objc.python_method
+    def _start_streaming_bubble(self):
+        self._streaming_text = ""
+        self._streaming_y    = self._y_cursor
+
+        initial_h = PAD_V * 2 + 22
+        bubble = BubbleView.alloc().initWithFrame_(
+            NSMakeRect(MARGIN, self._streaming_y, MAX_BW, initial_h)
+        )
+        bubble._color = ASST_BUBBLE
+
+        tf = NSTextField.alloc().initWithFrame_(
+            NSMakeRect(PAD_H, PAD_V, MAX_BW - PAD_H * 2, 22)
+        )
+        tf.setStringValue_("")
+        tf.setFont_(BODY_FONT)
+        tf.setTextColor_(WHITE)
+        tf.setBezeled_(False)
+        tf.setDrawsBackground_(False)
+        tf.setEditable_(False)
+        tf.setSelectable_(True)
+        tf.setWraps_(True)
+        bubble.addSubview_(tf)
+
+        self._doc_view.addSubview_(bubble)
+        self._streaming_bubble = bubble
+        self._streaming_tf     = tf
+
+        self._y_cursor = self._streaming_y + initial_h + ROW_GAP
+        self._grow_doc_view_if_needed()
+        self._scroll_to_bottom()
+
+    @objc.python_method
+    def _append_streaming_chunk(self, chunk: str):
+        if self._streaming_bubble is None:
+            return
+
+        self._streaming_text += chunk
+        inner_w = MAX_BW - PAD_H * 2
+
+        attr = NSAttributedString.alloc().initWithString_attributes_(
+            self._streaming_text, {NSFontAttributeName: BODY_FONT}
+        )
+        bound = attr.boundingRectWithSize_options_context_(
+            NSMakeSize(inner_w, 10_000), 1, None
+        )
+        text_h   = math.ceil(bound.size.height) + 2
+        bubble_h = text_h + PAD_V * 2
+
+        old = self._streaming_bubble.frame()
+        self._streaming_bubble.setFrame_(
+            NSMakeRect(old.origin.x, old.origin.y, MAX_BW, bubble_h)
+        )
+        self._streaming_tf.setFrame_(NSMakeRect(PAD_H, PAD_V, inner_w, text_h))
+        self._streaming_tf.setStringValue_(self._streaming_text)
+        self._streaming_bubble.setNeedsDisplay_(True)
+
+        self._y_cursor = self._streaming_y + bubble_h + ROW_GAP
+        self._grow_doc_view_if_needed()
+        self._scroll_to_bottom()
+
+    # ── layout helpers ────────────────────────────────────────────────────────
+
+    @objc.python_method
+    def _grow_doc_view_if_needed(self):
         if self._y_cursor + ROW_GAP > self._doc_view.frame().size.height:
             self._doc_view.setFrame_(
                 NSMakeRect(0, 0, W, self._y_cursor + ROW_GAP)
             )
 
-        # Scroll to show latest bubble
+    @objc.python_method
+    def _scroll_to_bottom(self):
         scroll_y = max(0.0, self._y_cursor - CHAT_H + ROW_GAP)
         self._doc_view.scrollPoint_(NSMakePoint(0.0, scroll_y))
 

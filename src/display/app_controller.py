@@ -11,7 +11,7 @@ import time
 from conversation.config import DEFAULT_LANGUAGE
 from conversation.speech.speech_to_text import WhisperSTT
 from conversation.speech.text_to_speech import speak
-from conversation.text.text_to_text import get_chat_response
+from conversation.text.text_to_text import stream_chat_response
 
 
 class ConversationController:
@@ -25,13 +25,14 @@ class ConversationController:
     is responsible for marshalling them to the main thread if needed.
     """
 
-    def __init__(self, *, on_status, on_user_bubble, on_assistant_bubble,
-                 on_mic_reset, on_mic_disabled):
-        self._on_status           = on_status
-        self._on_user_bubble      = on_user_bubble
-        self._on_assistant_bubble = on_assistant_bubble
-        self._on_mic_reset        = on_mic_reset
-        self._on_mic_disabled     = on_mic_disabled
+    def __init__(self, *, on_status, on_user_bubble, on_assistant_stream_start,
+                 on_assistant_chunk, on_mic_reset, on_mic_disabled):
+        self._on_status                  = on_status
+        self._on_user_bubble             = on_user_bubble
+        self._on_assistant_stream_start  = on_assistant_stream_start
+        self._on_assistant_chunk         = on_assistant_chunk
+        self._on_mic_reset               = on_mic_reset
+        self._on_mic_disabled            = on_mic_disabled
 
         self._language  = DEFAULT_LANGUAGE
         self._history   = []
@@ -80,17 +81,20 @@ class ConversationController:
 
         self._on_status("Thinking…")
         try:
-            reply = get_chat_response(self._history, language=self._language)
+            self._on_assistant_stream_start()
+            full_reply = ""
+            for chunk in stream_chat_response(self._history, language=self._language):
+                full_reply += chunk
+                self._on_assistant_chunk(chunk)
         except RuntimeError as e:
             self._on_status(str(e))
             self._on_mic_reset()
             return
 
-        self._history.append({"role": "assistant", "content": reply})
-        self._on_assistant_bubble(reply)
+        self._history.append({"role": "assistant", "content": full_reply})
 
         self._on_status("Speaking…")
-        speak(reply, language=self._language)
+        speak(full_reply, language=self._language)
 
         time.sleep(0.75)
         self._on_status("Tap to speak")

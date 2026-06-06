@@ -38,3 +38,21 @@ def get_chat_response(messages, language="Spanish"):
         raise RuntimeError(f"Ollama error ({e.status_code}): {e.error}")
     except Exception as e:
         raise RuntimeError(f"Failed to reach Ollama. Is it running? ({e})")
+
+
+def stream_chat_response(messages, language="Spanish"):
+    """Yield text chunks as the model streams them."""
+    system = {"role": "system", "content": SYSTEM_PROMPTS.get(language, SYSTEM_PROMPTS["English"])}
+    try:
+        for part in ollama.chat(
+            model=OLLAMA_MODEL,
+            messages=[system] + messages,
+            stream=True,
+        ):
+            chunk = part.get("message", {}).get("content", "")
+            if chunk:
+                yield chunk
+    except ollama.ResponseError as e:
+        raise RuntimeError(f"Ollama error ({e.status_code}): {e.error}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to reach Ollama. Is it running? ({e})")
